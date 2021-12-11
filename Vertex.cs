@@ -1,16 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Windows.Shapes;
+using System.ComponentModel;
+using System.Drawing;
+using System.Runtime.CompilerServices;
 
 namespace GraphTheorySketchPad
 {
     /// <summary>
     /// Vertex representation of graph
     /// </summary>
-    public class Vertex : Graph
+    public class Vertex : INotifyPropertyChanged
     {
         public string currentVertex;
+        private string point = string.Empty;
+        private double vx = 0.0;
+        private double vy = 0.0;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // This method is called by the Set accessor of each property.  
+        // The CallerMemberName attribute that is applied to the optional propertyName  
+        // parameter causes the property name of the caller to be substituted as an argument.  
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         /// <summary>
         /// Create Vertex point
@@ -26,18 +40,36 @@ namespace GraphTheorySketchPad
         /// </summary>
         public string Point
         {
-            get => this.Point;
-            set => this.Point = value;
+            get => this.point;
+            set => this.point = value;
         }
-        public double X
+        public double Vx
         {
-            get => this.X;
-            set => this.X = value;
+            get => this.vx;
+            set
+            {
+                if (this.vx != value)
+                {
+                    this.vx = value;
+                    this.NotifyPropertyChanged();
+                }
+            }
         }
-        public double Y
+
+
+   
+
+        public double Vy
         {
-            get => this.X;
-            set => this.X = value;
+            get => this.vy;
+            set
+            {
+                if (this.vy != value)
+                {
+                    this.vy = value;
+                    this.NotifyPropertyChanged();
+                }
+            }
         }
 
     }

@@ -15,11 +15,13 @@ namespace GraphTheorySketchPad
         private Point dragStartPoint, dragEndPoint, objectStartLocation;
         private Ellipse parentVertex;
         private object clickedObject;
-
+        private Canvas canvas = new Canvas();
+        
         public MainWindow()
         {
             InitializeComponent();
             this.myGraph = new Graph();
+            //this.canvas.DataContext 
         }
 
 

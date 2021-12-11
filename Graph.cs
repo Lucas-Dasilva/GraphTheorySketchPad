@@ -7,7 +7,6 @@ namespace GraphTheorySketchPad
     public class Graph
     {
         // Allows for listening to event, the middle man between trigger and listener
-        public event EventHandler<string> VertexCreatedEvent;
 
         public int numberOfVertices;
         List<Vertex> vertices = new List<Vertex>();
