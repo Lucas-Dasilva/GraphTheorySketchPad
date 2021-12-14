@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid x:Name="myGrid" Background="#FF404F83">
-        <Canvas x:Name="myCanvas" Margin="238,0,0,0" Background="White" Height="434" PreviewMouseMove="myCanvas_PreviewMouseMove" MouseLeftButtonDown="myCanvas_MouseLeftButtonDown" MouseUp="myCanvas_MouseUp"/>
+        <Canvas x:Name="myCanvas" Focusable ="True" Margin="238,0,0,0" Background="White" Height="434" PreviewMouseMove="myCanvas_PreviewMouseMove" MouseLeftButtonDown="myCanvas_MouseLeftButtonDown" MouseUp="myCanvas_MouseUp"/>
         <Label Content="Vectors:" HorizontalAlignment="Left" Margin="29,80,0,0" VerticalAlignment="Top"/>
         <Label Content="Edges:" HorizontalAlignment="Left" Margin="36,111,0,0" VerticalAlignment="Top"/>
         <TextBlock x:Name="mousePositionX" HorizontalAlignment="Left" Margin="36,217,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top"/>

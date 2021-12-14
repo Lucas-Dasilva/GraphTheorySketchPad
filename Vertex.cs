@@ -13,6 +13,10 @@ namespace GraphTheorySketchPad
     {
         public string currentVertex;
         private string point = string.Empty;
+        private string color = "Black";
+        private List<string> edges = new List<string>();
+        private double width = 0.0;
+        private double height = 0.0;
         private double vx = 0.0;
         private double vy = 0.0;
 
@@ -30,9 +34,13 @@ namespace GraphTheorySketchPad
         /// Create Vertex point
         /// </summary>
         /// <param name="num"></param>
-        public Vertex(int num)
+        public Vertex(int num, double vx, double vy, double width, double height)
         {
             Point = "v" + num.ToString();
+            Width = width;
+            Height = height;
+            Vx = vx;
+            Vy = vy;
         }
         
         /// <summary>
@@ -41,7 +49,24 @@ namespace GraphTheorySketchPad
         public string Point
         {
             get => this.point;
-            set => this.point = value;
+            set
+            {
+                if (this.point != value)
+                {
+                    this.point = value;
+                    this.NotifyPropertyChanged();
+                }
+            }
+        }
+        public double Width
+        {
+            get => this.width;
+            set => this.width = value;
+        }
+        public double Height
+        {
+            get => this.height;
+            set => this.height = value;
         }
         public double Vx
         {
@@ -55,9 +80,6 @@ namespace GraphTheorySketchPad
                 }
             }
         }
-
-
-   
 
         public double Vy
         {
