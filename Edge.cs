@@ -22,6 +22,7 @@ namespace GraphTheorySketchPad
         private double edgeCurveX;
         private double edgeCurveY;
         private double height;
+        private int size;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -44,6 +45,7 @@ namespace GraphTheorySketchPad
             this.x2 = x2;
             this.y2 = y2;
             this.height = -1.0;
+            this.size = -1;
             this.EdgeCurveX = -1.0;
         }
         public string V1
@@ -124,6 +126,11 @@ namespace GraphTheorySketchPad
         {
             get => this.height;
             set => this.height = value;
+        }
+        public int Size
+        {
+            get => this.size;
+            set => this.size = value;
         }
 
     }

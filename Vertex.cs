@@ -11,10 +11,8 @@ namespace GraphTheorySketchPad
     /// </summary>
     public class Vertex : INotifyPropertyChanged
     {
-        public string currentVertex;
+        public int currentIndex;
         private string point = string.Empty;
-        private string color = "Black";
-        private List<string> edges = new List<string>();
         private double width = 0.0;
         private double height = 0.0;
         private double vx = 0.0;
@@ -39,6 +37,7 @@ namespace GraphTheorySketchPad
             Point = "v" + num.ToString();
             Width = width;
             Height = height;
+            currentIndex = num;
             Vx = vx;
             Vy = vy;
         }
@@ -54,6 +53,21 @@ namespace GraphTheorySketchPad
                 if (this.point != value)
                 {
                     this.point = value;
+                    this.NotifyPropertyChanged();
+                }
+            }
+        }
+        /// <summary>
+        /// Gets or sets the vertex Uid
+        /// </summary>
+        public int CurrentIndex
+        {
+            get => this.currentIndex;
+            set
+            {
+                if (this.currentIndex != value)
+                {
+                    this.currentIndex = value;
                     this.NotifyPropertyChanged();
                 }
             }

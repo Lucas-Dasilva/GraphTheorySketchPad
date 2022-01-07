@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 
 namespace GraphTheorySketchPad
@@ -20,14 +19,21 @@ namespace GraphTheorySketchPad
         private object clickedObject;
         private object clickedObjectC;
         private List<TextBlock> labelList = new List<TextBlock>();
+        private Cursor OpenHand = FromByteArray(Properties.Resources.OpenHandcursor);
+        private Cursor CloseHand = FromByteArray(Properties.Resources.CloseHandCursor);
 
+        public static Cursor FromByteArray(byte[] array)
+        {
+            using (System.IO.MemoryStream memoryStream = new System.IO.MemoryStream(array))
+            {
+                return new Cursor(memoryStream);
+            }
+        }
         public MainWindow()
         {
             InitializeComponent();
             this.myGraph.PropertyChanged += MyGraph_PropertyChanged;
         }
-
-
 
         /// <summary>
         /// When a vertex is moved, update the edge location that corresponds to that vertex
@@ -60,17 +66,25 @@ namespace GraphTheorySketchPad
                 else if (child is Path)
                 {
                     Path edge = child as Path;
-                    //{ 145,203.5,203.5,39.45965576171875}
-                    //{ M145,241Q252.18671788622567,251.7532557292512,348.5,203.5}
-                    if (edge.Name == ec.Name && edge.Uid == ec.Height.ToString())
+
+                    // If path is not a loop
+                    // else, path is a loop
+                    if (edge.Name == ec.Name && edge.Uid == ec.Height.ToString() && ec.V1 != ec.V2)
                     {
                         Point curvePoint = this.GetCurvePoint(ec.X1, ec.Y1, ec.X2, ec.Y2, ec.Height);
                         Path edgeCurve = this.DrawCurve(ec.X1, ec.Y1, curvePoint.X, curvePoint.Y, ec.X2, ec.Y2);
                         edge.Data = edgeCurve.Data;
                     }
+                    else if(edge.Name == ec.Name && edge.Uid == ec.Size.ToString())
+                    {
+                        Path edgeLoop = this.DrawLoop(ec.X1, ec.Y1, ec.X1, ec.Y1, ec.Size);
+                        edge.Data = edgeLoop.Data;
+                    }
                 }
 
             }
+            UpdateStroke();
+
         }
 
 
@@ -85,16 +99,16 @@ namespace GraphTheorySketchPad
             if (clickedObject is null)
             {
                 // Create ellipse on vancas and get mouse coordinates
-                Ellipse vertex = new Ellipse() { Fill = Brushes.Navy, Width = 30, Height = 30  };
-                TextBlock vLabel = new TextBlock();
+                Ellipse vertex = new Ellipse() { SnapsToDevicePixels = false, Fill = Brushes.Navy, Width = 30, Height = 30  };
+                TextBlock vLabel = new TextBlock() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                 Point p = e.GetPosition(this.myCanvas);
-
                 // Set position of vertex on canvas and vertex class
                 Vertex vc = myGraph.CreateVertex(p.X - (vertex.Width / 2), p.Y - (vertex.Height / 2), vertex.Width, vertex.Height);
                 Canvas.SetLeft(vertex, vc.Vx);
                 Canvas.SetTop(vertex, vc.Vy);
                 Canvas.SetZIndex(vertex, 1);
                 vertex.Name = vc.Point;
+                vertex.Uid = vc.Point;
 
                 // Subscribe vertex to events
                 vertex.PreviewMouseDown += Vertex_PreviewMouseDown;
@@ -105,7 +119,7 @@ namespace GraphTheorySketchPad
                 vertex.PreviewKeyDown += Vertex_PreviewKeyDown;
 
                 // Label Initial Position
-                vLabel.Text = vertex.Name;
+                vLabel.Name = vc.Point;
                 vLabel.Foreground = Brushes.Red;
                 labelList.Add(vLabel);
                 Canvas.SetLeft(vLabel, vc.Vx + (vertex.Width / 3));
@@ -115,6 +129,11 @@ namespace GraphTheorySketchPad
                 // Add vertex and label to graph class
                 myCanvas.Children.Add(vertex);
                 myCanvas.Children.Add(vLabel);
+                UpdateLabelText();
+
+
+                // Edit textbox values
+                this.vectorTextBox.Text = this.GenerateVectorText();
 
             }
         }
@@ -132,7 +151,7 @@ namespace GraphTheorySketchPad
                 // Get the object thats clicked and convert it to an ellipse
                 Ellipse vertex = sender as Ellipse;
                 Vertex v = myGraph.GetVertex(vertex.Name);
-
+                myCanvas.Cursor = CloseHand;
                 // Save initial position
                 dragStartPoint.X = e.GetPosition(this).X;
                 dragStartPoint.Y = e.GetPosition(this).Y;
@@ -157,6 +176,7 @@ namespace GraphTheorySketchPad
                 edge.X2 = p.X;
                 edge.Y2 = p.Y;
                 edge.PreviewMouseRightButtonDown += Edge_PreviewMouseRightButtonDown;
+                UpdateStroke();
 
                 // Add edge to canvas
                 myCanvas.Children.Add(edge);
@@ -182,7 +202,7 @@ namespace GraphTheorySketchPad
             {
                 Ellipse vertex = clickedObject as Ellipse;
                 Vertex v = clickedObjectC as Vertex;
-                TextBlock label = labelList.Find(l => l.Text == v.Point);
+                TextBlock label = labelList.Find(l => l.Name == v.Point);
 
                 // Save initial position
                 dragEndPoint.X = e.GetPosition(this).X;
@@ -221,17 +241,23 @@ namespace GraphTheorySketchPad
             if (clickedObject is Line)
             {
                 Ellipse vertex = sender as Ellipse;
+                Line edge = clickedObject as Line;
+                Edge ec = myGraph.CreateEdge(parentVertex.Name, vertex.Name, edge.X1, edge.Y1, edge.X2, edge.Y2);
+                TextBlock label = labelList.Find(l => l.Name == vertex.Name);
+                UpdateLabelText();
+
                 double x1 = Canvas.GetLeft(parentVertex) + (parentVertex.Width / 2);
                 double y1 = Canvas.GetTop(parentVertex) + (parentVertex.Width / 2);
                 double x2 = Canvas.GetLeft(vertex) + (vertex.Width / 2);
                 double y2 = Canvas.GetTop(vertex) + (vertex.Width / 2);
-    
+                string edgeName = ec.Name;
+                int numberOfEdges = myGraph.GetNumberofEdgesWithSameName(parentVertex.Name, vertex.Name);
+
+                // If we are drawing an edge or adjacent edge
+                // else draw a loop if on same vertex
                 if (vertex != parentVertex)
                 {
-                    Line edge = clickedObject as Line;
-                    Edge ec = myGraph.CreateEdge(parentVertex.Name, vertex.Name, edge.X1, edge.Y1, edge.X2, edge.Y2);
-                    string edgeName = ec.Name;
-                    int numberOfEdges = myGraph.GetNumberofEdgesWithSameName(parentVertex.Name, vertex.Name);
+
 
                     // If this edge is a parallel line
                     // else it's a regular line
@@ -254,8 +280,11 @@ namespace GraphTheorySketchPad
                             edgeCurve.Uid = height.ToString();
                             myCanvas.Children.Remove(edge);
                             myCanvas.Children.Add(edgeCurve);
+                            UpdateStroke();
+
+                            edgeCurve.MouseEnter += EdgeCurve_MouseEnter;
+                            edgeCurve.MouseLeave += EdgeCurve_MouseLeave;
                             edgeCurve.PreviewMouseRightButtonDown += EdgeCurve_PreviewMouseRightButtonDown;
-                            clickedObject = null;
                         }
                         else
                         {
@@ -272,19 +301,89 @@ namespace GraphTheorySketchPad
                             edgeCurve.Uid = height.ToString();
                             edgeCurve.PreviewMouseRightButtonDown += EdgeCurve_PreviewMouseRightButtonDown;
                             myCanvas.Children.Add(edgeCurve);
-                            clickedObject = null;
+                            edgeCurve.MouseEnter += EdgeCurve_MouseEnter;
+                            edgeCurve.MouseLeave += EdgeCurve_MouseLeave;
+                            UpdateStroke();
+
                         }
                     }
                     else
                     {
+                        UpdateStroke();
+                        edge.MouseEnter += Edge_MouseEnter;
+                        edge.MouseLeave += Edge_MouseLeave;
                         edge.X2 = x2;
                         edge.Y2 = y2;
                         edge.Name = edgeName;
                         // Create edge object only after the fact that it is connected to another vertex
-                        clickedObject = null;
                     }
                 }
+                else
+                {
+                    int size = (numberOfEdges * 8) + 5;
+
+                    Path edgeLoop = DrawLoop(x1, y1, x2, y2, size);
+                    ec.Size = size;
+                    edgeLoop.Name = edgeName;
+                    edgeLoop.Uid = size.ToString();
+                    myCanvas.Children.Remove(edge);
+                    myCanvas.Children.Add(edgeLoop);
+                    UpdateStroke();
+
+                    edgeLoop.PreviewMouseRightButtonDown += EdgeCurve_PreviewMouseRightButtonDown;
+                    edgeLoop.MouseEnter += EdgeLoop_MouseEnter;
+                    edgeLoop.MouseLeave += EdgeLoop_MouseLeave;
+                }
             }
+
+            // Update Text box
+            this.edgeTextBox.Text = this.GenerateEdgeText();
+            clickedObject = null;
+            clickedObjectC = null;
+        }
+
+        private void EdgeCurve_MouseLeave(object sender, MouseEventArgs e)
+        {
+            Path edge = sender as Path;
+            UpdateStroke();
+            myCanvas.Cursor = Cursors.Arrow;
+        }
+
+        private void EdgeCurve_MouseEnter(object sender, MouseEventArgs e)
+        {
+            Path edge = sender as Path;
+            edge.Stroke = Brushes.Black;
+            myCanvas.Cursor = Cursors.Hand;
+        }
+
+        private void EdgeLoop_MouseEnter(object sender, MouseEventArgs e)
+        {
+            Path edge = sender as Path;
+            edge.Stroke = Brushes.Black;
+            myCanvas.Cursor = Cursors.Hand;
+        }
+
+
+        private void EdgeLoop_MouseLeave(object sender, MouseEventArgs e)
+        {
+            Path edge = sender as Path;
+            UpdateStroke();
+            myCanvas.Cursor = Cursors.Arrow;
+        }
+
+   
+        private void Edge_MouseEnter(object sender, MouseEventArgs e)
+        {
+            Line edge = sender as Line;
+            edge.Stroke = Brushes.Black;
+            myCanvas.Cursor = Cursors.Hand;
+
+        }
+        private void Edge_MouseLeave(object sender, MouseEventArgs e)
+        {
+            Line edge = sender as Line;
+            UpdateStroke();
+            myCanvas.Cursor = Cursors.Arrow;
         }
 
 
@@ -304,10 +403,13 @@ namespace GraphTheorySketchPad
                 Line edge = clickedObject as Line;
                 myCanvas.Children.Remove(edge);
                 clickedObject = null;
+                clickedObjectC = null;
             }
             else if (e.MiddleButton == MouseButtonState.Released && clickedObject is Ellipse)
             {
+                myCanvas.Cursor = Cursors.Hand;
                 clickedObject = null;
+                clickedObjectC = null;
             }
         }
 
@@ -320,22 +422,18 @@ namespace GraphTheorySketchPad
         private void Vertex_MouseEnter(object sender, MouseEventArgs e)
         {
             Ellipse vertex = sender as Ellipse; 
-            TextBlock vLabel = labelList.Find(l => l.Text == vertex.Name);
+            TextBlock vLabel = labelList.Find(l => l.Name == vertex.Name);
             Vertex vc = myGraph.GetVertex(vertex.Name);
-    
-            Canvas.SetZIndex(vLabel, 0);
-            vLabel.Foreground = Brushes.Black;
+            myCanvas.Cursor = Cursors.Hand;
+
+            vLabel.Foreground = Brushes.Red;
             vertex.Focusable = true;
-            vertex.Width = vc.Width + 5;
-            vertex.Height = vc.Height + 5;
-            vertex.Opacity = .75;
-            vertex.StrokeThickness = 1;
-            vertex.Stroke = Brushes.DarkGray;
+            vertex.StrokeThickness = 1.7;
+            vertex.Stroke = Brushes.Black;
             vertex.Focus();
-            Canvas.SetLeft(vLabel, Canvas.GetLeft(vertex) + (vertex.Width / 3));
-            Canvas.SetTop(vLabel, Canvas.GetTop(vertex) + (vertex.Height / 4));
 
-
+            Canvas.SetZIndex(vLabel, 1);
+            Canvas.SetZIndex(vertex, 2);
         }
 
         /// <summary>
@@ -346,20 +444,17 @@ namespace GraphTheorySketchPad
         private void Vertex_MouseLeave(object sender, MouseEventArgs e)
         {
             Ellipse vertex = sender as Ellipse;
-            TextBlock vLabel = labelList.Find(l => l.Text == vertex.Name);
+            TextBlock vLabel = labelList.Find(l => l.Name == vertex.Name);
             Vertex vc = myGraph.GetVertex(vertex.Name);
-      
+            myCanvas.Cursor = Cursors.Arrow;
+
             vLabel.Foreground = Brushes.OldLace;
 
-            Canvas.SetZIndex(vLabel, 2);
             vertex.Focusable = false;
             vertex.Opacity = 1;
-            vertex.Width = vc.Width;
-            vertex.Height = vc.Height;
             vertex.StrokeThickness = 0;
-            vertex.Stroke = Brushes.Gray;
-            Canvas.SetLeft(vLabel, vc.Vx + (vertex.Width / 3));
-            Canvas.SetTop(vLabel, vc.Vy + (vertex.Height / 5));
+            Canvas.SetZIndex(vLabel, 2);
+            Canvas.SetZIndex(vertex, 1);
         }
 
         private void Vertex_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -387,6 +482,25 @@ namespace GraphTheorySketchPad
             }
         }
 
+        /// <summary>
+        /// Draws loop if vertex parent is same as current vertex
+        /// </summary>
+        private Path DrawLoop(double x1, double y1, double x2, double y2, int size)
+        {
+            Path path = new Path() { Stroke = Brushes.DimGray, StrokeThickness = 3 };
+            PathFigure figure = new PathFigure() { StartPoint = new Point(x1, y1) };
+            ArcSegment arc = new ArcSegment() { Point = new Point(x2, y2 + 1), IsLargeArc = true, Size = new Size(size, size) };
+            PathGeometry geometry = new PathGeometry();
+
+
+            figure.Segments.Add(arc);
+            geometry.Figures.Add(figure);
+            path.Data = geometry;
+            UpdateStroke();
+
+
+            return path;
+        }
 
 
         /// <summary>
@@ -400,21 +514,17 @@ namespace GraphTheorySketchPad
         /// <param name="y2">End point of line y</param>
         public Path DrawCurve(double x1, double y1, double ctrlx, double ctrly, double x2, double y2)
         {
-            Path path = new Path() { Stroke = Brushes.Black, StrokeThickness = 4 };
-
+            Path path = new Path() { Stroke = Brushes.DimGray, StrokeThickness = 4 };
             QuadraticBezierSegment bezier = new QuadraticBezierSegment() { Point1 = new Point(ctrlx, ctrly), Point2 = new Point(x2, y2) };
-
             PathFigure figure = new PathFigure() { StartPoint = new Point(x1, y1) };
-            figure.Segments.Add(bezier);
-
             PathGeometry geometry = new PathGeometry();
-            geometry.Figures.Add(figure);
 
+            UpdateStroke();
+            figure.Segments.Add(bezier);
+            geometry.Figures.Add(figure);
             path.Data = geometry;
 
             return path;
-            //Debug.WriteLine("Curve Start Point: ( " + x1 + ", " + y1 + ")");
-            //Debug.WriteLine("Curve End Point: ( " + x2 + ", " + y2 + ")");
         }
 
         public Point GetCurvePoint(double x1, double y1, double x2, double y2, double height)
@@ -439,13 +549,14 @@ namespace GraphTheorySketchPad
             Ellipse vertex = sender as Ellipse;
             List<Line> lineItemstoremove = new List<Line>();
             List<Path> pathItemstoremove = new List<Path>();
+            List<TextBlock> labelIttemstoRemove = new List<TextBlock>();
             List<Edge> deletionList = myGraph.RemoveEdgesConnectedTo(vertex.Name);
 
             foreach (UIElement child in myCanvas.Children)
             {
                 if (child is TextBlock)
                 {
-
+                    labelIttemstoRemove.Add(child as TextBlock);
                 }
                 foreach (Edge ec in deletionList)
                 {
@@ -475,7 +586,10 @@ namespace GraphTheorySketchPad
             {
                 myCanvas.Children.Remove(edge);
             }
-            TextBlock label = labelList.Find(l => l.Text == vertex.Name);
+            foreach (TextBlock label in labelIttemstoRemove)
+            {
+                myCanvas.Children.Remove(label);
+            }
 
             // unsubscribe vertex to events
             vertex.PreviewMouseDown -= Vertex_PreviewMouseDown;
@@ -485,9 +599,102 @@ namespace GraphTheorySketchPad
             vertex.MouseLeave -= Vertex_MouseLeave;
             vertex.PreviewKeyDown -= Vertex_PreviewKeyDown;
             myGraph.RemoveVertex(vertex.Name);
-            myCanvas.Children.Remove(label);
-            labelList.Remove(label);
             myCanvas.Children.Remove(vertex);
+            UpdateLabels();
+            UpdateEllipses();
+            UpdateLines();
+            UpdateLabelText();
+            UpdateStroke();
+            myCanvas.Cursor = Cursors.Arrow;
+
+            // Edit textbox values
+            this.vectorTextBox.Text = this.GenerateVectorText();
+            this.edgeTextBox.Text = this.GenerateEdgeText();
+
+        }
+
+        private void UpdateLines()
+        {
+            int count = 0;
+            // update each ellipse name
+            foreach (UIElement child in myCanvas.Children)
+            {
+                if (child is Line)
+                {
+                    Line edge = child as Line;
+                    edge.Name = myGraph.edgeList[count].Name;
+                    count++;
+                }
+                else if (child is Path)
+                {
+                    Path edge = child as Path;
+                    edge.Name = myGraph.edgeList[count].Name;
+                    count++;
+                }    
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void UpdateLabels()
+        {
+            labelList.Clear();
+
+            foreach(Vertex vc in myGraph.vertexList)
+            {
+                TextBlock vLabel = new TextBlock();
+                vLabel.Name = vc.Point;
+                UpdateLabelText();
+                vLabel.Foreground = Brushes.OldLace;
+                
+                Canvas.SetLeft(vLabel, vc.Vx + (vc.Width / 3));
+                Canvas.SetTop(vLabel, vc.Vy + (vc.Height / 5));
+                Canvas.SetZIndex(vLabel, 1);
+
+                labelList.Add(vLabel);
+                myCanvas.Children.Add(vLabel);
+            }
+        }
+        private void UpdateEllipses()
+        {
+            int count = 0;
+            // update each ellipse name
+            foreach (UIElement child in myCanvas.Children)
+            {
+                if (child is Ellipse)
+                {
+                    Ellipse vertex = child as Ellipse;
+                    vertex.Name = myGraph.vertexList[count].Point;
+                    count++;
+                }
+            }
+        }
+
+        private void clearButton_Click(object sender, RoutedEventArgs e)
+        {
+            List<UIElement> deleteList = new List<UIElement>();
+            foreach (UIElement child in myCanvas.Children)
+            {
+                // Delete all except for button
+                if (!(child is Button))
+                {
+                    deleteList.Add(child);
+                }
+            }
+            foreach (UIElement item in deleteList)
+            {
+                myCanvas.Children.Remove(item);
+            }
+            myGraph.edgeList.Clear();
+            myGraph.vertexList.Clear();
+            labelList.Clear();
+            clickedObject = null;
+            clickedObjectC = null;
+
+            // Edit textbox values
+            this.vectorTextBox.Text = this.GenerateVectorText();
+            this.edgeTextBox.Text = this.GenerateEdgeText();
         }
 
         /// <summary>
@@ -501,6 +708,12 @@ namespace GraphTheorySketchPad
             myGraph.RemoveEdge(edge.Name);
             myCanvas.Children.Remove(edge);
 
+            // Edit textbox values
+            UpdateLabels();
+            UpdateLabelText();
+
+            this.vectorTextBox.Text = this.GenerateVectorText();
+            this.edgeTextBox.Text = this.GenerateEdgeText();
         }
 
         /// <summary>
@@ -511,11 +724,188 @@ namespace GraphTheorySketchPad
         private void Edge_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             Line edge = sender as Line;
-     
             myGraph.RemoveEdge(edge.Name);
             myCanvas.Children.Remove(edge);
 
+            UpdateLabels();
+            UpdateLabelText();
+            // Edit textbox values
+            this.vectorTextBox.Text = this.GenerateVectorText();
+            this.edgeTextBox.Text = this.GenerateEdgeText();
         }
 
+        private string GenerateVectorText()
+        {
+            string strBuild = "{ ";
+            foreach (Vertex v in myGraph.vertexList)
+            {
+                strBuild += v.Point + ", ";
+            }
+            strBuild.Remove(strBuild.Length - 1);
+            strBuild.Remove(strBuild.Length - 2);
+            strBuild += "}";
+            return strBuild;
+        }
+
+        private string GenerateEdgeText()
+        {
+            string strBuild = "{ ";
+            foreach (Edge e in myGraph.edgeList)
+            {
+                strBuild += e.Name + ", ";
+            }
+            strBuild.Remove(strBuild.Length - 1);
+            strBuild.Remove(strBuild.Length - 2);
+            strBuild += "}";
+            return strBuild;
+
+        }
+
+        /// <summary>
+        /// Toggle Directed Graph
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void toggleDirected_Click(object sender, RoutedEventArgs e)
+        {
+            if (toggleDirected.Content.ToString() == "Toggle Directed")
+            {
+                toggleDirected.Content = "Toggle Normal";
+                this.UpdateStroke();
+
+            }
+            else
+            {
+                toggleDirected.Content = "Toggle Directed";
+                this.UpdateStroke();
+            }
+        }
+
+        /// <summary>
+        /// Update the stroke of each edge
+        /// </summary>
+        private void UpdateStroke()
+        {
+            if (toggleDirected.Content.ToString() == "Toggle Directed")
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is Line)
+                    {
+                        Line edge = child as Line;
+                        edge.Stroke = Brushes.DimGray;
+                    }
+                    else if (child is Path)
+                    {
+                        Path edge = child as Path;
+                        edge.Stroke = Brushes.DimGray;
+                    }
+                }
+            }
+            else
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is Line)
+                    {
+                        Line edge = child as Line;
+                        if (edge.Name != "")
+                        {
+                            Edge ec = myGraph.edgeList.Find(e => e.Name == edge.Name);
+                            LinearGradientBrush myLinearGradientBrush = new LinearGradientBrush();
+                            myLinearGradientBrush.MappingMode = BrushMappingMode.Absolute;
+                            myLinearGradientBrush.StartPoint = new Point(ec.X1, ec.Y1);
+                            myLinearGradientBrush.EndPoint = new Point(ec.X2, ec.Y2);
+                            myLinearGradientBrush.GradientStops.Add(new GradientStop(Colors.DimGray, .5));
+                            myLinearGradientBrush.GradientStops.Add(new GradientStop(Colors.Red, 1.0));
+                            edge.Stroke = myLinearGradientBrush;
+                        }
+                       
+                    }
+                    else if (child is Path)
+                    {
+                        Path edge = child as Path;
+                        if (edge.Name != "")
+                        {
+                            Edge ec = myGraph.edgeList.Find(e => e.Name == edge.Name);
+                            LinearGradientBrush myLinearGradientBrush = new LinearGradientBrush();
+                            myLinearGradientBrush.MappingMode = BrushMappingMode.Absolute;
+                            myLinearGradientBrush.StartPoint = new Point(ec.X1, ec.Y1);
+                            myLinearGradientBrush.EndPoint = new Point(ec.X2, ec.Y2);
+                            myLinearGradientBrush.GradientStops.Add(new GradientStop(Colors.DimGray, 0.5));
+                            myLinearGradientBrush.GradientStops.Add(new GradientStop(Colors.Red, 1.0));
+                            edge.Stroke = myLinearGradientBrush;
+                        }
+                    }
+                }
+            }
+            
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void toggleMode_Click(object sender, RoutedEventArgs e)
+        {
+            Button tm = sender as Button;
+
+            // if the string is toggle degree then change all vertices labels
+            if (toggleMode.Content.ToString() == "Toggle Degree")
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is TextBlock)
+                    {
+                        TextBlock label = child as TextBlock;
+                        label.Text = myGraph.GetVertexDegree(label.Name).ToString();
+                    }
+                }
+                tm.Content = "Toggle Labels";
+            }
+            else
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is TextBlock)
+                    {
+                        TextBlock label = child as TextBlock;
+                        label.Text = label.Name;
+                    }
+                }
+                tm.Content = "Toggle Degree";
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void UpdateLabelText()
+        {
+            if (toggleMode.Content.ToString() == "Toggle Degree")
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is TextBlock)
+                    {
+                        TextBlock label = child as TextBlock;
+                        label.Text = label.Name;
+                    }
+                }
+            }
+            else
+            {
+                foreach (UIElement child in myCanvas.Children)
+                {
+                    if (child is TextBlock)
+                    {
+                        TextBlock label = child as TextBlock;
+                        label.Text = myGraph.GetVertexDegree(label.Name).ToString();
+                    }
+                }
+                
+            }
+        }
     }
 }

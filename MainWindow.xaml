@@ -5,15 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GraphTheorySketchPad"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid x:Name="myGrid" Background="#FF404F83">
-        <Canvas x:Name="myCanvas" Focusable ="True" Margin="238,0,0,0" Background="White" Height="434" PreviewMouseMove="myCanvas_PreviewMouseMove" MouseLeftButtonDown="myCanvas_MouseLeftButtonDown" MouseUp="myCanvas_MouseUp"/>
-        <Label Content="Vectors:" HorizontalAlignment="Left" Margin="29,80,0,0" VerticalAlignment="Top"/>
-        <Label Content="Edges:" HorizontalAlignment="Left" Margin="36,111,0,0" VerticalAlignment="Top"/>
-        <TextBlock x:Name="mousePositionX" HorizontalAlignment="Left" Margin="36,217,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <TextBlock x:Name="mousePositionY" HorizontalAlignment="Left" Margin="104,217,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <TextBlock x:Name="dragStartX" HorizontalAlignment="Left" Margin="36,257,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <TextBlock x:Name="dragStartY" HorizontalAlignment="Left" Margin="104,257,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        Title="MainWindow" Height="500" Width="800">
+    <Grid x:Name="myGrid" Background="#FF3C3C3C">
+        <Canvas x:Name="myCanvas" Focusable ="True" Background="#FFEEEEEE" PreviewMouseMove="myCanvas_PreviewMouseMove" MouseLeftButtonDown="myCanvas_MouseLeftButtonDown" MouseUp="myCanvas_MouseUp" Margin="0,97,0,0">
+            <Button x:Name="clearButton" Content="Clear" Canvas.Left="352" Height="23" Width="96" Click="clearButton_Click" Background="White"/>
+            <Button x:Name="toggleMode" Content="Toggle Degree" Canvas.Left="448" Height="23" Width="96" Click="toggleMode_Click" Background="White"/>
+            <Button x:Name="toggleDirected" Content="Toggle Directed" Canvas.Left="256" Height="23" Width="96" Click="toggleDirected_Click" Background="White"/>
+        </Canvas>
+        <Label Content="Vectors:" HorizontalAlignment="Left" Margin="9,10,0,0" VerticalAlignment="Top" FontSize="16" FontFamily="Lucida Sans" FontWeight="Bold" Background="Transparent" Foreground="#FFEEEEEE"/>
+        <Label Content="Edges:" HorizontalAlignment="Left" Margin="19,46,0,0" VerticalAlignment="Top" FontSize="16" FontFamily="Lucida Sans" FontWeight="Bold" Foreground="#FFE8E8E8"/>
+        <TextBox x:Name="vectorTextBox" HorizontalAlignment="Left" Margin="90,10,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="409" Height="29" Background="{x:Null}" Foreground="White" SelectionTextBrush="White"/>
+        <TextBox x:Name="edgeTextBox" HorizontalAlignment="Left" Margin="90,46,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="409" Height="29" Background="{x:Null}" Foreground="White"/>
 
     </Grid>
 </Window>

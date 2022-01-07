@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 
@@ -10,8 +11,8 @@ namespace GraphTheorySketchPad
         // Allows for listening to event, the middle man between trigger and listener
 
         public int numberOfVertices;
-        List<Vertex> vertexList = new List<Vertex>();
-        List<Edge> edgeList = new List<Edge>();
+        public List<Vertex> vertexList = new List<Vertex>();
+        public List<Edge> edgeList = new List<Edge>();
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -25,13 +26,24 @@ namespace GraphTheorySketchPad
             this.PropertyChanged?.Invoke(edge, new PropertyChangedEventArgs(name));
         }
 
+        /// <summary>
+        /// Invokes the property changed event which alerts the form of which property of the edge is changed
+        /// </summary>
+        /// <param name="name">The name of property that's being changed</param>
+        /// <param name="edge">The edge whose property is being changed</param>
+        protected void GraphPropertyChanged(Graph edge, string name)
+        {
+            this.PropertyChanged?.Invoke(edge, new PropertyChangedEventArgs(name));
+        }
+
+
         public Vertex CreateVertex(double vx, double vy, double width, double height)
         {
             Vertex v = new Vertex(vertexList.Count, vx, vy, width, height);
 
             vertexList.Add(v);
-            numberOfVertices = vertexList.Count;
-            v.PropertyChanged += new PropertyChangedEventHandler(this.VextexPropertyChanged);
+            NumberOfVertices = vertexList.Count;
+            v.PropertyChanged += new PropertyChangedEventHandler(this.VertexPropertyChanged);
             return v;
         }
         public Edge CreateEdge(string v1, string v2, double x1, double y1, double x2, double y2)
@@ -41,13 +53,45 @@ namespace GraphTheorySketchPad
             return e;
         }
 
+        public int NumberOfVertices
+        {
+            get => numberOfVertices;
+            set
+            {
+                if (this.numberOfVertices != value)
+                {
+                    this.numberOfVertices = value;
+                    //this.GraphPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns the degree of given vertex
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public int GetVertexDegree(string name)
+        {
+            Vertex vertex = vertexList.Find(v => v.Point == name);
+            int degree = 0;
+            foreach (Edge e in edgeList.ToArray())
+            {
+                if (e.Name.Contains(name))
+                {
+                    degree++;
+                }
+            }
+            return degree;
+
+        }
 
         /// Create the OnPropertyChanged method to raise the event
         /// The calling member's name will be used as the parameter.
         /// </summary>
         /// <param name="sender">Sender Object</param>
         /// <param name="e">Event argument e</param>
-        protected void VextexPropertyChanged(object sender, PropertyChangedEventArgs e)
+        protected void VertexPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             Vertex v = sender as Vertex;
 
@@ -119,11 +163,39 @@ namespace GraphTheorySketchPad
         /// <param name="name"></param>
         public void RemoveVertex(string name)
         {
+            string oldName = string.Empty;
+            string newName = string.Empty;
             foreach (Vertex v in vertexList.ToArray())
             {
                 if (v.Point == name)
                 {
                     vertexList.Remove(v);
+                }
+            }
+            for (int i = 0; i < vertexList.Count; i++)
+            {
+                if (vertexList[i].currentIndex != i)
+                {
+                    oldName = vertexList[i].Point;
+                    vertexList[i].currentIndex = i;
+                    vertexList[i].Point = "v" + i.ToString();
+                    newName = vertexList[i].Point;
+                    for (int j = 0; j < edgeList.Count; j++)
+                    {
+                        // If edge is found containing the old name, update it
+                        if (edgeList[j].V1 == oldName)
+                        {
+                            edgeList[j].V1 = newName;
+                            edgeList[j].V2 = oldName;
+                            edgeList[j].Name = newName + oldName;
+                        }
+                        else if (edgeList[j].V2 == oldName)
+                        {
+                            edgeList[j].V2 = newName;
+                            edgeList[j].V1 = oldName;
+                            edgeList[j].Name = oldName + newName;
+                        }
+                    }
                 }
             }
         }
@@ -139,6 +211,7 @@ namespace GraphTheorySketchPad
                 if (e.Name == name)
                 {
                     edgeList.Remove(e);
+                    break;
                 }
             }
         }
@@ -164,6 +237,7 @@ namespace GraphTheorySketchPad
             return count;
         }
 
+ 
         public bool CheckExistanceOfCurve(double x, double y)
         {
             foreach (Edge e in edgeList)
@@ -176,8 +250,11 @@ namespace GraphTheorySketchPad
             return false;
         }
 
-
-
-
+        internal void Clear()
+        {
+            this.vertexList.Clear();
+            this.edgeList.Clear();
+            this.NumberOfVertices = 0;
+        }
     }
 }
