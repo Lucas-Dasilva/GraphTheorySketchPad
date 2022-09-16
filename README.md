@@ -2,7 +2,7 @@
 
 ## Project summary
 
-I created this project as a tool to be used by graph theorist. The project allows for basic graph node interactions. Allot of graph theory concepts are easier to understand when visualized; This tool was made for that purpose. 
+I created this project as a tool to be used by graph theorist. The project allows for basic graph node interactions. A lot of graph theory concepts are easier to understand when visualized; This tool was made for that purpose. 
 
 ## Basic Examples
 
